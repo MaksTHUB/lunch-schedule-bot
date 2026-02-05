@@ -2,7 +2,7 @@ name: Lunch schedule
 
 on:
   schedule:
-    - cron: "49 18 * * *"  # 06:00 UTC = 11:00 Алматы, Пн-Пт
+    - cron: "30 5 * * 1-5"  # 06:00 UTC = 11:00 Алматы, Пн-Пт
   workflow_dispatch:
 
 jobs:
