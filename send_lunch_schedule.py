@@ -7,7 +7,7 @@ from datetime import date, timedelta
 # Команда 1 = 12:00, Команда 2 = 12:30, Команда 3 = 13:00
 CYCLE_START_DATE = date(2026, 2, 5)  # <-- поменяй на свою реальную дату старта
 
-TEAMS = ["Команда 1", "Команда 2", "Команда 3"]
+TEAMS = ["ITGC", "АБИС", "KKZ"]
 TIMES = ["12:00", "12:30", "13:00"]  # базовый порядок для дня 0
 
 BOT_TOKEN = os.getenv("BOT_TOKEN")
