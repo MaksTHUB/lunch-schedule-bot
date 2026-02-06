@@ -59,7 +59,7 @@ def main():
     shift = idx % 3
     todays_times = shift_times(shift)
 
-    lines = [f"{TEAMS[i]} — {todays_times[i]}" for i in range(3)]
+    lines = [f"{TEAMS[i]} - {todays_times[i]}" for i in range(3)]
     msg = "🕘 Расписание обеда на сегодня:\n" + "\n".join(lines)
 
     send_message(msg)
