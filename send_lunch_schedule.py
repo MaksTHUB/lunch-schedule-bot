@@ -4,7 +4,7 @@ from datetime import date, timedelta
 
 # День старта цикла:
 # ITGC = 12:00, АБИС = 12:30, KKZ = 13:00
-START_DATE = date(2026, 2, 5)
+START_DATE = date(2026, 3, 11)
 
 TEAMS = ["ITGC", "АБИС", "KKZ"]
 TIMES = ["12:00", "12:30", "13:00"]
