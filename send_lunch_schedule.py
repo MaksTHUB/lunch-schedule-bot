@@ -7,7 +7,7 @@ from datetime import date, timedelta
 START_DATE = date(2026, 3, 11)
 
 TEAMS = ["ITGC", "АБИС", "KKZ"]
-TIMES = ["12:00", "12:30", "13:00"]
+TIMES = ["13:00", "12:00", "12:30"]
 
 BOT_TOKEN = os.getenv("BOT_TOKEN")
 CHAT_ID = os.getenv("CHAT_ID")
