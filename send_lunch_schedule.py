@@ -1,16 +1,25 @@
 import os
-import requests
-from datetime import date, timedelta
+from datetime import date, datetime, timedelta
+from zoneinfo import ZoneInfo
 
-# День старта цикла:
-# ITGC = 12:00, АБИС = 12:30, KKZ = 13:00
-START_DATE = date(2026, 3, 11)
+import requests
+
+
+# Новая точка начала цикла:
+# 29.07.2026:
+# ITGC — 13:00
+# АБИС — 12:00
+# KKZ — 12:30
+START_DATE = date(2026, 7, 29)
 
 TEAMS = ["ITGC", "АБИС", "KKZ"]
-TIMES = ["13:00", "12:00", "12:30"]
+START_TIMES = ["13:00", "12:00", "12:30"]
+
+ALMATY_TIMEZONE = ZoneInfo("Asia/Almaty")
 
 BOT_TOKEN = os.getenv("BOT_TOKEN")
 CHAT_ID = os.getenv("CHAT_ID")
+
 
 # Дополнительные выходные дни в 2026 году
 HOLIDAYS = {
@@ -29,56 +38,93 @@ HOLIDAYS = {
 }
 
 
-def is_workday(day):
-    # Сб и Вс
+def is_workday(day: date) -> bool:
+    """Проверяет, является ли дата рабочим днём."""
+
+    # Суббота или воскресенье
     if day.weekday() >= 5:
         return False
-    # Дополнительные выходные
+
+    # Дополнительный выходной
     if day in HOLIDAYS:
         return False
+
     return True
 
 
-def workdays_between(start, end):
+def count_workdays(start: date, end: date) -> int:
+    """
+    Считает рабочие дни от start включительно,
+    но не включает end.
+    """
+
+    if end < start:
+        raise ValueError("Текущая дата не может быть раньше START_DATE")
+
     days = 0
     current = start
-    while current <= end:
+
+    while current < end:
         if is_workday(current):
             days += 1
+
         current += timedelta(days=1)
+
     return days
 
 
-def send(text):
+def send_message(text: str) -> None:
+    """Отправляет сообщение в Telegram."""
+
+    if not BOT_TOKEN:
+        raise RuntimeError("Не задан GitHub Secret BOT_TOKEN")
+
+    if not CHAT_ID:
+        raise RuntimeError("Не задан GitHub Secret CHAT_ID")
+
     url = f"https://api.telegram.org/bot{BOT_TOKEN}/sendMessage"
-    requests.post(
+
+    response = requests.post(
         url,
-        json={"chat_id": CHAT_ID, "text": text},
-        timeout=20
-    ).raise_for_status()
+        json={
+            "chat_id": CHAT_ID,
+            "text": text,
+        },
+        timeout=20,
+    )
+
+    response.raise_for_status()
 
 
-def main():
-    today = date.today()
+def main() -> None:
+    # Используем именно дату Алматы, а не UTC-даты GitHub Runner
+    today = datetime.now(ALMATY_TIMEZONE).date()
 
     # В выходные и праздники ничего не отправляем
     if not is_workday(today):
+        print(f"{today}: выходной день, сообщение не отправлено")
         return
 
-    # Сколько рабочих дней прошло с даты старта
-    day_number = workdays_between(START_DATE, today) - 1
-    shift = day_number % 3
+    # Количество рабочих дней после START_DATE
+    day_number = count_workdays(START_DATE, today)
 
-    # Сдвигаем время по кругу
-    today_times = TIMES[shift:] + TIMES[:shift]
+    # Сдвиг расписания: 0 → 1 → 2 → 0
+    shift = day_number % len(TEAMS)
+
+    today_times = START_TIMES[shift:] + START_TIMES[:shift]
 
     lines = [
-        f"{TEAMS[i]} - {today_times[i]}"
-        for i in range(3)
+        f"{team} - {lunch_time}"
+        for team, lunch_time in zip(TEAMS, today_times)
     ]
 
-    message = "🕘 Расписание обеда на сегодня:\n" + "\n".join(lines)
-    send(message)
+    message = (
+        "🕘 Расписание обеда на сегодня:\n"
+        + "\n".join(lines)
+    )
+
+    print(message)
+    send_message(message)
 
 
 if __name__ == "__main__":
