@@ -1,70 +1,66 @@
 import os
-from datetime import date, datetime, timedelta
-from zoneinfo import ZoneInfo
-
 import requests
+from datetime import date, timedelta
 
+# Новая точка старта цикла:
+# 04.09.2026
+# ITGC = 13:00
+# IPSO = 12:00
+# Kaspi.kz = 12:30
 
-# Новая точка начала цикла:
-# 29.07.2026:
-# ITGC — 13:00
-# АБИС — 12:00
-# KKZ — 12:30
-START_DATE = date(2026, 7, 29)
+START_DATE = date(2026, 9, 4)
 
 TEAMS = ["ITGC", "АБИС", "KKZ"]
-START_TIMES = ["13:00", "12:00", "12:30"]
 
-ALMATY_TIMEZONE = ZoneInfo("Asia/Almaty")
+# Расписание именно на START_DATE
+TIMES = ["13:00", "12:00", "12:30"]
 
 BOT_TOKEN = os.getenv("BOT_TOKEN")
 CHAT_ID = os.getenv("CHAT_ID")
 
 
-# Дополнительные выходные дни в 2026 году
+# Дополнительные выходные дни 2026
 HOLIDAYS = {
     date(2026, 3, 9),
     date(2026, 3, 23),
     date(2026, 3, 24),
     date(2026, 3, 25),
+
     date(2026, 5, 1),
     date(2026, 5, 7),
     date(2026, 5, 11),
     date(2026, 5, 27),
+
     date(2026, 7, 6),
+
     date(2026, 8, 31),
+
     date(2026, 10, 26),
+
     date(2026, 12, 16),
 }
 
 
-def is_workday(day: date) -> bool:
-    """Проверяет, является ли дата рабочим днём."""
+def is_workday(day):
 
-    # Суббота или воскресенье
+    # Суббота и воскресенье
     if day.weekday() >= 5:
         return False
 
-    # Дополнительный выходной
+    # Дополнительные выходные
     if day in HOLIDAYS:
         return False
 
     return True
 
 
-def count_workdays(start: date, end: date) -> int:
-    """
-    Считает рабочие дни от start включительно,
-    но не включает end.
-    """
-
-    if end < start:
-        raise ValueError("Текущая дата не может быть раньше START_DATE")
+def workdays_between(start, end):
 
     days = 0
     current = start
 
-    while current < end:
+    while current <= end:
+
         if is_workday(current):
             days += 1
 
@@ -73,49 +69,43 @@ def count_workdays(start: date, end: date) -> int:
     return days
 
 
-def send_message(text: str) -> None:
-    """Отправляет сообщение в Telegram."""
-
-    if not BOT_TOKEN:
-        raise RuntimeError("Не задан GitHub Secret BOT_TOKEN")
-
-    if not CHAT_ID:
-        raise RuntimeError("Не задан GitHub Secret CHAT_ID")
+def send(text):
 
     url = f"https://api.telegram.org/bot{BOT_TOKEN}/sendMessage"
 
-    response = requests.post(
+    requests.post(
         url,
         json={
             "chat_id": CHAT_ID,
-            "text": text,
+            "text": text
         },
-        timeout=20,
-    )
-
-    response.raise_for_status()
+        timeout=20
+    ).raise_for_status()
 
 
-def main() -> None:
-    # Используем именно дату Алматы, а не UTC-даты GitHub Runner
-    today = datetime.now(ALMATY_TIMEZONE).date()
+def main():
 
-    # В выходные и праздники ничего не отправляем
+    today = date.today()
+
+    # В выходные ничего не отправляем
     if not is_workday(today):
-        print(f"{today}: выходной день, сообщение не отправлено")
         return
 
-    # Количество рабочих дней после START_DATE
-    day_number = count_workdays(START_DATE, today)
+    # Сколько рабочих дней прошло с 04.09.2026
+    day_number = workdays_between(START_DATE, today) - 1
 
-    # Сдвиг расписания: 0 → 1 → 2 → 0
-    shift = day_number % len(TEAMS)
+    # 0 → первый вариант
+    # 1 → второй
+    # 2 → третий
+    # затем снова 0
+    shift = day_number % 3
 
-    today_times = START_TIMES[shift:] + START_TIMES[:shift]
+    # Сдвигаем расписание по кругу
+    today_times = TIMES[shift:] + TIMES[:shift]
 
     lines = [
-        f"{team} - {lunch_time}"
-        for team, lunch_time in zip(TEAMS, today_times)
+        f"{TEAMS[i]} - {today_times[i]}"
+        for i in range(3)
     ]
 
     message = (
@@ -123,8 +113,7 @@ def main() -> None:
         + "\n".join(lines)
     )
 
-    print(message)
-    send_message(message)
+    send(message)
 
 
 if __name__ == "__main__":
